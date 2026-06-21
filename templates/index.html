@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#0A0D12">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+<title>SmartChair // لوحة التحكم</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+
+<script type="importmap">
+  {
+    "imports": {
+      "firebase/app": "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js",
+      "firebase/database": "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+    }
+  }
+</script>
+
+<script src="{{ url_for('static', filename='push.js') }}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</head>
+<body>
+
+
+
+  
+
+{% include "_sidebar.html" %}
+
+<main class="main">
+
+  <div class="topbar">
+    <div class="page-title">لوحة <span>التحكم</span></div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px;" onclick="window.setupPushNotifications('{{ vapid_public_key }}')">
+        <i class="ti ti-bell-ringing" aria-hidden="true"></i> إشعارات الموبايل
+      </button>
+      <div class="status-chip chip-on" id="chair-chip"><i class="ti ti-circle-filled" style="font-size:8px;" aria-hidden="true"></i> النظام آمن</div>
+      <div class="status-chip chip-off" id="device-chip" style="display:none;"><i class="ti ti-plug-connected-x" aria-hidden="true"></i> الجهاز غير متصل</div>
+      <span class="mono-num" style="font-size:13px;color:var(--text-mid);" id="clock">--:--</span>
+    </div>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric m-red">
+      <div class="metric-lbl"><i class="ti ti-heart-rate-monitor" aria-hidden="true"></i> نبضات القلب</div>
+      <div class="metric-val mono-num" id="m-bpm">-- <span class="unit">BPM</span></div>
+      <div class="metric-foot" id="m-bpm-status" style="color:var(--text-low);">بانتظار الإشارة</div>
+    </div>
+   
+    <div class="metric m-green">
+      <div class="metric-lbl"><i class="ti ti-battery-4" aria-hidden="true"></i> طاقة الكرسي</div>
+      <div class="metric-val mono-num" id="m-bat">-- <span class="unit">%</span></div>
+      <div class="metric-foot" id="m-bat-status" style="color:var(--text-low);">بانتظار القراءة</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:1.1rem;">
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-shield-bolt" aria-hidden="true"></i> حالة المريض الحيوية</div>
+      <div class="fall-badge fall-stable" id="fall-badge">
+        <i class="ti ti-circle-check" style="font-size:18px;" aria-hidden="true"></i>
+        <span id="fall-text">جاري الاتصال بالخوذة...</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-shield-lock" aria-hidden="true"></i> نظام الأمان</div>
+      <div class="safety-toggle-row">
+        <div>
+          <div class="safety-label">تفعيل نظام الأمان الطبي وفحص الإغماء</div>
+          <div class="safety-sub" id="safety-status">الحالة: متوقف</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="safety-switch" />
+          <span class="switch-track"></span>
+          <span class="switch-thumb"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.1rem;">
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-chart-line" aria-hidden="true"></i> تتبع النبض - مباشر</div>
+      <div class="chart-wrap">
+        <canvas id="bpmChart" role="img" aria-label="رسم بياني لنبضات القلب الحية">نبضات القلب الحية</canvas>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-pill" aria-hidden="true"></i> أدوية اليوم</div>
+      <div id="meds-today">
+        <div style="font-size:12.5px;color:var(--text-low);text-align:center;padding:1.5rem 0;">جاري التحميل من Firebase...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><i class="ti ti-terminal-2" aria-hidden="true"></i> آخر السجلات</div>
+    <div id="logs-summary">
+      <div style="font-size:12.5px;color:var(--text-low);text-align:center;padding:1rem 0;">لا توجد سجلات بعد</div>
+    </div>
+  </div>
+
+</main>
+
+<script type="module">
+import { db, ref, onValue, set } from "{{ url_for('static', filename='firebase.js') }}";
+
+let lastSeenMs = 0;
+onValue(ref(db, 'system/last_seen'), snap => {
+  const v = snap.val();
+  if (v) lastSeenMs = (typeof v === 'number' && v < 1e12) ? v * 1000 : v;
+});
+
+function checkDeviceFreshness() {
+  const deviceChip = document.getElementById('device-chip');
+  const isStale = !lastSeenMs || (Date.now() - lastSeenMs > 6000);
+  deviceChip.style.display = isStale ? 'flex' : 'none';
+
+  ['m-bpm', 'm-dist', 'm-bat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (isStale) el.style.opacity = '0.35';
+    else el.style.opacity = '1';
+  });
+  if (isStale) {
+    document.getElementById('m-bpm-status').textContent = 'لا يوجد اتصال بالجهاز';
+    document.getElementById('m-bpm-status').style.color = 'var(--text-low)';
+  }
+}
+setInterval(checkDeviceFreshness, 2000);
+
+setInterval(() => {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'});
+}, 1000);
+
+const bpmHistory = Array(30).fill(null);
+const ctx = document.getElementById('bpmChart').getContext('2d');
+const bpmChart = new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: Array(30).fill(''),
+    datasets: [{
+      data: bpmHistory,
+      borderColor: '#FF3B4E',
+      backgroundColor: 'rgba(255,59,78,0.08)',
+      borderWidth: 2, fill: true, tension: 0.4, pointRadius: 0
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { display: false },
+      y: { min: 40, max: 140,
+        ticks: { color: '#54616F', font: { size: 10 } },
+        grid: { color: 'rgba(120,150,180,0.06)' }
+      }
+    },
+    animation: false
+  }
+});
+function pushBpm(v) {
+  bpmHistory.push(v); bpmHistory.shift();
+  bpmChart.data.datasets[0].data = [...bpmHistory];
+  bpmChart.update('none');
+}
+
+onValue(ref(db, 'chair'), snap => {
+  const d = snap.val();
+  if (!d) return;
+
+  const dirMap = { forward:'للأمام ▲', backward:'للخلف ▼', left:'يسار ◀', right:'يمين ▶', stop:'متوقف ■' };
+  document.getElementById('m-dir').textContent = dirMap[d.direction] ?? d.direction ?? '--';
+
+  const dist = d.distance_cm;
+  document.getElementById('m-dist').innerHTML = (dist ?? '--') + ' <span class="unit">CM</span>';
+  const ds = document.getElementById('m-dist-status');
+  if (typeof dist === 'number') {
+    if (dist < 30)      { ds.textContent = '🚨 خطر اصطدام'; ds.style.color = 'var(--red)'; }
+    else if (dist < 60) { ds.textContent = '⚠ اقتراب من عائق'; ds.style.color = 'var(--amber)'; }
+    else                { ds.textContent = '✓ المسار آمن'; ds.style.color = 'var(--green)'; }
+  }
+
+  const bat = d.battery_pct;
+  document.getElementById('m-bat').innerHTML = (bat ?? '--') + ' <span class="unit">%</span>';
+  const bs = document.getElementById('m-bat-status');
+  if (typeof bat === 'number') {
+    if (bat < 20)      { bs.textContent = '🔴 شحن فوري مطلوب'; bs.style.color = 'var(--red)'; }
+    else if (bat < 50) { bs.textContent = '🟡 متوسطة'; bs.style.color = 'var(--amber)'; }
+    else               { bs.textContent = '🟢 جيدة'; bs.style.color = 'var(--green)'; }
+  }
+
+  const active = d.active ?? false;
+  const chip = document.getElementById('chair-chip');
+  chip.className = 'status-chip ' + (active ? 'chip-on' : 'chip-off');
+  chip.innerHTML = `<i class="ti ti-circle-filled" style="font-size:8px;" aria-hidden="true"></i> ${active ? 'النظام آمن' : ' الكرسي متوقف (أمان)'}`;
+});
+
+onValue(ref(db, 'patient/heartRate'), snap => {
+  const bpm = snap.val();
+  if (bpm === null || bpm === undefined) return;
+  document.getElementById('m-bpm').innerHTML = bpm + ' <span class="unit">BPM</span>';
+  pushBpm(bpm > 0 ? bpm : null);
+  const st = document.getElementById('m-bpm-status');
+  if (bpm === 0)        { st.textContent = 'لا توجد إشارة'; st.style.color = 'var(--text-low)'; }
+  else if (bpm < 60)    { st.textContent = '⚠ منخفض'; st.style.color = 'var(--amber)'; }
+  else if (bpm > 100)   { st.textContent = '⚠ مرتفع'; st.style.color = 'var(--red)'; }
+  else                  { st.textContent = '✓ طبيعي'; st.style.color = 'var(--green)'; }
+});
+
+onValue(ref(db, 'patient/fallStatus'), snap => {
+  const status = snap.val() || 'جاري الاتصال بالخوذة...';
+  const badge = document.getElementById('fall-badge');
+  const text  = document.getElementById('fall-text');
+  text.textContent = status;
+  if (status.includes('🚨')) {
+    badge.className = 'fall-badge fall-danger';
+    badge.querySelector('i').className = 'ti ti-alert-triangle-filled';
+  } else if (status.includes('⚠')) {
+    badge.className = 'fall-badge fall-warn';
+    badge.querySelector('i').className = 'ti ti-alert-circle';
+  } else {
+    badge.className = 'fall-badge fall-stable';
+    badge.querySelector('i').className = 'ti ti-circle-check';
+  }
+});
+
+const switchEl = document.getElementById('safety-switch');
+let firstLoad = true;
+onValue(ref(db, 'config/pulse_check_enable'), snap => {
+  const enabled = snap.val();
+  if (enabled === null && firstLoad) {
+    set(ref(db, 'config/pulse_check_enable'), false);
+  }
+  switchEl.checked = !!enabled;
+  document.getElementById('safety-status').textContent = 'الحالة: ' + (enabled ? 'مفعّل ✓' : 'متوقف');
+  firstLoad = false;
+});
+switchEl.addEventListener('change', () => {
+  set(ref(db, 'config/pulse_check_enable'), switchEl.checked);
+});
+
+onValue(ref(db, 'medications'), snap => {
+  const data = snap.val();
+  const c = document.getElementById('meds-today');
+  if (!data) { c.innerHTML = '<div style="font-size:12.5px;color:var(--text-low);text-align:center;padding:1.5rem 0;">لا توجد أدوية مضافة</div>'; return; }
+  const now = new Date();
+  const nowMins = now.getHours()*60 + now.getMinutes();
+  c.innerHTML = Object.values(data).map(m => {
+    const next = (m.times ?? []).find(t => { const [h,mi]=t.split(':').map(Number); return h*60+mi > nowMins; });
+    const badge = next ? `<span class="med-badge b-soon">${next}</span>` : `<span class="med-badge b-done">تم اليوم</span>`;
+    return `<div class="med-row">
+      <div class="med-dot" style="background:${m.color ?? '#2FD3E0'};"></div>
+      <div style="flex:1;"><div class="med-name">${m.name}</div><div class="med-sub">${m.dose ?? ''}</div></div>
+      ${badge}
+    </div>`;
+  }).join('');
+});
+
+onValue(ref(db, 'alerts'), snap => {
+  const data = snap.val();
+  const c = document.getElementById('logs-summary');
+  if (!data) return;
+  const items = Object.values(data).slice(-3).reverse();
+  c.innerHTML = items.map(a => {
+    const cls = a.type === 'danger' ? 'log-danger' : a.type === 'warn' ? 'log-warn' : 'log-ok';
+    return `<div class="log-item ${cls}"><div>${a.message}<div class="log-time">${a.time ?? ''}</div></div></div>`;
+  }).join('');
+});
+</script>
+</body>
+</html>

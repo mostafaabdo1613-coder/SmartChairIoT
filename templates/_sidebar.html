@@ -1,0 +1,21 @@
+<nav class="sidebar">
+  <div class="brand">
+    <div class="brand-row">
+      <div class="brand-icon" id="brand-icon"><i class="ti ti-wheelchair" aria-hidden="true"></i></div>
+      <div>
+        <div class="brand-title">SmartChair</div>
+      
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/"            class="nav-item {{ 'active' if active=='dashboard' }}"><i class="ti ti-activity-heartbeat" aria-hidden="true"></i> لوحة التحكم</a>
+    <a href="/patient"     class="nav-item {{ 'active' if active=='patient' }}"><i class="ti ti-id-badge-2" aria-hidden="true"></i> الملف الطبي</a>
+    <a href="/medications" class="nav-item {{ 'active' if active=='medications' }}"><i class="ti ti-vaccine-bottle" aria-hidden="true"></i> الأدوية</a>
+    <a href="/alerts"      class="nav-item {{ 'active' if active=='alerts' }}"><i class="ti ti-alert-octagon" aria-hidden="true"></i> سجل التنبيهات</a>
+  </div>
+  <div class="sidebar-bottom">
+    <span class="pulse-dot"></span> اتصال Firebase نشط
+  </div>
+</nav>

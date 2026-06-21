@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartChair // سجل التنبيهات</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+</head>
+<body>
+
+{% include "_sidebar.html" %}
+
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">سجل <span>التنبيهات</span></div>
+    <button class="btn btn-danger" onclick="clearAll()"><i class="ti ti-trash" aria-hidden="true"></i> مسح السجل بالكامل</button>
+  </div>
+
+  <div class="metric-grid">
+    <div class="metric m-red">
+      <div class="metric-lbl"><i class="ti ti-alert-octagon" aria-hidden="true"></i> طوارئ</div>
+      <div class="metric-val mono-num" id="cnt-danger">0</div>
+      <div class="metric-foot" style="color:var(--red);">حرجة</div>
+    </div>
+    <div class="metric m-amber">
+      <div class="metric-lbl"><i class="ti ti-alert-triangle" aria-hidden="true"></i> تحذيرات</div>
+      <div class="metric-val mono-num" id="cnt-warn">0</div>
+      <div class="metric-foot" style="color:var(--amber);">متابعة</div>
+    </div>
+    <div class="metric m-green">
+      <div class="metric-lbl"><i class="ti ti-circle-check" aria-hidden="true"></i> إشعارات عادية</div>
+      <div class="metric-val mono-num" id="cnt-ok">0</div>
+      <div class="metric-foot" style="color:var(--green);">طبيعي</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title"><i class="ti ti-history" aria-hidden="true"></i> السجل الزمني الكامل</div>
+    <div id="alerts-list">
+      <div style="text-align:center;padding:1.5rem;color:var(--text-low);font-size:13px;">جاري التحميل من Firebase...</div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { db, ref, onValue, remove } from "{{ url_for('static', filename='firebase.js') }}";
+
+window.clearAll = async () => {
+  if (!confirm('هل أنت متأكد من مسح كل سجل التنبيهات نهائياً؟')) return;
+  await remove(ref(db, 'alerts'));
+};
+
+onValue(ref(db, 'alerts'), snap => {
+  const data = snap.val();
+  const c = document.getElementById('alerts-list');
+  if (!data) {
+    c.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-low);font-size:13px;">لا توجد تنبيهات مسجلة</div>';
+    document.getElementById('cnt-danger').textContent = 0;
+    document.getElementById('cnt-warn').textContent = 0;
+    document.getElementById('cnt-ok').textContent = 0;
+    return;
+  }
+  const items = Object.entries(data).reverse();
+  let d=0, w=0, o=0;
+  c.innerHTML = items.map(([id, a]) => {
+    const cls = a.type === 'danger' ? 'log-danger' : a.type === 'warn' ? 'log-warn' : 'log-ok';
+    const icon = a.type === 'danger' ? 'ti-alert-octagon' : a.type === 'warn' ? 'ti-alert-triangle' : 'ti-circle-check';
+    if (a.type === 'danger') d++; else if (a.type === 'warn') w++; else o++;
+    return `<div class="log-item ${cls}" style="align-items:center;">
+      <i class="ti ${icon}" style="font-size:16px;" aria-hidden="true"></i>
+      <div style="flex:1;">${a.message}<div class="log-time">${a.time ?? ''}</div></div>
+    </div>`;
+  }).join('');
+  document.getElementById('cnt-danger').textContent = d;
+  document.getElementById('cnt-warn').textContent = w;
+  document.getElementById('cnt-ok').textContent = o;
+});
+</script>
+</body>
+</html>

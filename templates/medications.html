@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#0A0D12">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+<title>SmartChair // الأدوية والتحكم</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+<script src="{{ url_for('static', filename='push.js') }}"></script>
+</head>
+<body>
+
+{% include "_sidebar.html" %}
+
+<main class="main">
+  <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--glass-border); margin-bottom: 20px; border-radius: 8px;">
+    
+      <button class="btn btn-primary" onclick="window.openForm(true)"><i class="ti ti-plus" aria-hidden="true"></i> دواء جديد</button>
+    </div>
+  </div>
+
+  <div id="banner" class="banner"></div>
+
+  <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:1.1rem;">
+    
+    <div style="display:flex; flex-direction:column; gap:1.1rem;">
+      <div class="panel" style="text-align: center; padding: 20px;">
+        
+        
+      </div>
+
+      <div class="panel">
+        <div class="panel-title"><i class="ti ti-list-check" aria-hidden="true"></i> قائمة الأدوية الجارية</div>
+        <div id="meds-list"><div style="text-align:center;padding:1.5rem;color:var(--text-low);font-size:13px;">جاري التحميل من Firebase...</div></div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:1.1rem;">
+      <div class="panel" style="border: 1px solid rgba(20, 23, 33, 0.3);">
+        <div class="panel-title" style="color: #bab9b9;"><i class="ti ti-alert-triangle" aria-hidden="true"></i> التحكم في المنبهات الطبية والتحذيرات</div>
+        <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button id="btn-trigger-med" onclick="window.setMedBuzzer(true)" class="btn" style="background-color: #232a38; color: #ffffff; font-weight: bold;"><i class="ti ti-bell" aria-hidden="true"></i> إرسال تنبيه الدواء</button>
+          <button id="btn-stop-med" onclick="window.setMedBuzzer(false)" class="btn" style="background-color: #810e04; color: #fff; font-weight: bold;"><i class="ti ti-bell-off" aria-hidden="true"></i> إيقاف التنبيه </button>
+        </div>
+        <div style="margin-top: 15px; text-align: center;">
+          <button id="btn-confirm-med" onclick="window.confirmMedTaken()" class="btn" style="background-color: #005335; color: #000; width: 90%; font-weight: bold; font-size: 14px;"><i class="ti ti-check" aria-hidden="true"></i>تأكيد من استلام المريض للدواء</button>
+        </div>
+      </div>
+
+      <div class="panel" id="form-panel" style="display:none;">
+        <div class="panel-title">
+          <span id="form-title" style="flex:1;"><i class="ti ti-pill" aria-hidden="true"></i> إضافة دواء</span>
+          <button class="icon-btn" onclick="window.closeForm()" aria-label="إغلاق"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+        <input type="hidden" id="edit-id" />
+        <div class="field"><label>اسم الدواء *</label><input type="text" id="f-name" placeholder="أسبرين، Lisinopril..." /></div>
+        <div class="field"><label>الجرعة *</label><input type="text" id="f-dose" placeholder="100mg، قرص واحد..." /></div>
+        <div class="field"><label>مواعيد الجرعات</label></div>
+        <div id="times-wrap" style="display:flex;flex-direction:column;gap:7px;margin-bottom:8px;"></div>
+        <button class="btn btn-ghost" style="width:100%;margin-bottom:1rem;" onclick="window.addTimeSlot()"><i class="ti ti-plus" aria-hidden="true"></i> إضافة موعد</button>
+        <div class="field"><label>لون البطاقة</label>
+          <div style="display:flex;gap:8px;" id="colors-row">
+            <div class="c-dot sel" data-c="#2FD3E0" style="width:22px;height:22px;border-radius:50%;background:#2FD3E0;cursor:pointer;outline:2px solid #2FD3E0;outline-offset:2px;" onclick="window.pickColor(this)"></div>
+            <div class="c-dot" data-c="#34D399" style="width:22px;height:22px;border-radius:50%;background:#34D399;cursor:pointer;" onclick="window.pickColor(this)"></div>
+            <div class="c-dot" data-c="#F5A623" style="width:22px;height:22px;border-radius:50%;background:#F5A623;cursor:pointer;" onclick="window.pickColor(this)"></div>
+            <div class="c-dot" data-c="#FF3B4E" style="width:22px;height:22px;border-radius:50%;background:#FF3B4E;cursor:pointer;" onclick="window.pickColor(this)"></div>
+            <div class="c-dot" data-c="#4C8DFF" style="width:22px;height:22px;border-radius:50%;background:#4C8DFF;cursor:pointer;" onclick="window.pickColor(this)"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:0.5rem;">
+          <button class="btn btn-ghost" style="flex:1;" onclick="window.closeForm()">إلغاء</button>
+          <button class="btn btn-primary" style="flex:2;" onclick="window.saveMed()"><i class="ti ti-device-floppy" aria-hidden="true"></i> حفظ في Firebase</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script type="module">
+import { db, ref, onValue, set, push, remove } from "{{ url_for('static', filename='firebase.js') }}";
+
+let timeCount = 0;
+let selColor = '#2FD3E0';
+let medsCache = {};
+const confirmedToday = {};
+
+// طلب تصريح الإشعارات فور فتح اللوحة
+if (window.Notification && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
+
+// ── تهيئة وتأمين الدوال داخل الـ window لضمان الربط الصحيح ──
+window.openForm = function(reset) {
+  if (reset === undefined) reset = true;
+  if (reset) {
+    document.getElementById('form-title').innerHTML = '<i class="ti ti-pill" aria-hidden="true"></i> إضافة دواء';
+    document.getElementById('edit-id').value = '';
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-dose').value = '';
+    document.getElementById('times-wrap').innerHTML = '';
+    timeCount = 0;
+    window.addTimeSlot('08:00');
+    selColor = '#2FD3E0';
+    document.querySelectorAll('.c-dot').forEach((c,i)=>{ c.style.outline = i===0 ? '2px solid '+c.dataset.c : 'none'; });
+  }
+  document.getElementById('form-panel').style.display = 'block';
+};
+
+window.closeForm = function() { 
+  document.getElementById('form-panel').style.display = 'none'; 
+};
+
+window.addTimeSlot = function(val) {
+  if (val === undefined || typeof val === 'object') val = '08:00';
+  timeCount++;
+  const wrap = document.getElementById('times-wrap');
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;background:rgba(8,11,15,0.5);border:1px solid var(--glass-border);';
+  row.innerHTML = `<span style="font-size:11px;color:var(--text-mid);min-width:46px;">جرعة ${timeCount}</span>
+    <input type="time" value="${val}" style="flex:1;border:none;background:transparent;color:var(--text-hi);font-size:13px;" />
+    <button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--text-mid);cursor:pointer;" aria-label="حذف"><i class="ti ti-x" style="font-size:13px;" aria-hidden="true"></i></button>`;
+  wrap.appendChild(row);
+};
+
+window.pickColor = function(el) {
+  selColor = el.dataset.c;
+  document.querySelectorAll('.c-dot').forEach(c => c.style.outline = 'none');
+  el.style.outline = '2px solid ' + selColor;
+  el.style.outlineOffset = '2px';
+};
+
+window.saveMed = async function() {
+  const name = document.getElementById('f-name').value.trim();
+  const dose = document.getElementById('f-dose').value.trim();
+  if (!name || !dose) { window.showBanner('اكتب اسم الدواء والجرعة', 'warn'); return; }
+  const times = Array.from(document.querySelectorAll('#times-wrap input[type=time]')).map(i=>i.value);
+  const data = { name, dose, times, color: selColor };
+  const editId = document.getElementById('edit-id').value;
+  try {
+    if (editId) {
+      await set(ref(db, 'medications/' + editId), data);
+      window.showBanner(`تم تحديث "${name}"`, 'ok');
+    } else {
+      await push(ref(db, 'medications'), data);
+      window.showBanner(`تم حفظ "${name}" — سيتم تشغيل البازر تلقائياً عند الموعد`, 'ok');
+    }
+    window.closeForm();
+  } catch(e) { window.showBanner('خطأ: ' + e.message, 'danger'); }
+};
+
+window.editMed = function(id) {
+  const m = medsCache[id];
+  if (!m) return;
+  window.openForm(false);
+  document.getElementById('form-title').innerHTML = '<i class="ti ti-edit" aria-hidden="true"></i> تعديل: ' + m.name;
+  document.getElementById('edit-id').value = id;
+  document.getElementById('f-name').value = m.name;
+  document.getElementById('f-dose').value = m.dose;
+  document.getElementById('times-wrap').innerHTML = '';
+  timeCount = 0;
+  (m.times ?? ['08:00']).forEach(t => window.addTimeSlot(t));
+  selColor = m.color ?? '#2FD3E0';
+  document.querySelectorAll('.c-dot').forEach(c => { c.style.outline = c.dataset.c === selColor ? '2px solid '+selColor : 'none'; });
+};
+
+window.deleteMed = async function(id, name) {
+  if (!confirm(`حذف "${name}"؟`)) return;
+  await remove(ref(db, 'medications/' + id));
+  window.showBanner(`تم حذف "${name}"`, 'ok');
+};
+
+// ── أزرار التحكم في جرس الدواء بالفايربيز ──
+window.setMedBuzzer = function(status) {
+  set(ref(db, 'config/trigger_buzzer_med'), status)
+  .then(() => { window.showBanner(status ? "تم إرسال إشارة جرس الدواء للأونو" : "تم إيقاف الجرس يدوياً", "ok"); })
+  .catch((e) => { window.showBanner("خطأ بالتحديث: " + e.message, "danger"); });
+};
+
+window.confirmMedTaken = function() {
+  set(ref(db, 'config/trigger_buzzer_med'), false);
+  alert("✅ تم تسجيل تأكيد أخذ الجرعة الدوائية للمريض بنجاح وايقاف المنبهات!");
+};
+
+window.showBanner = function(msg, type) {
+  const b = document.getElementById('banner');
+  b.className = 'banner show banner-' + type;
+  b.textContent = msg;
+  clearTimeout(b._t);
+  b._t = setTimeout(() => b.classList.remove('show'), 4000);
+};
+
+window.renderList = function() {
+  const c = document.getElementById('meds-list');
+  const entries = Object.entries(medsCache);
+  if (!entries.length) { c.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-low);font-size:13px;">لا توجد أدوية بعد</div>'; return; }
+  c.innerHTML = entries.map(([id, m]) => `
+    <div class="med-row">
+      <div class="med-dot" style="background:${m.color ?? '#2FD3E0'};"></div>
+      <div style="flex:1;"><div class="med-name">${m.name}</div><div class="med-sub">${m.dose} · ${(m.times ?? []).join(' · ')}</div></div>
+      <button class="icon-btn" onclick="window.editMed('${id}')" aria-label="تعديل"><i class="ti ti-edit" aria-hidden="true"></i></button>
+      <button class="icon-btn" onclick="window.deleteMed('${id}','${m.name}')" aria-label="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+    </div>`).join('');
+};
+
+// ── الاستماع لبيانات الأدوية من الفايربيز ──
+onValue(ref(db, 'medications'), snap => {
+  medsCache = snap.val() ?? {};
+  window.renderList();
+});
+
+// ── مراقبة حالة الطوارئ الحرجة ونطق الصوت والإنذار ──
+let lastAnomalyState = false;
+onValue(ref(db, 'chair/isAnomaly'), snap => {
+  const isAnomaly = snap.val();
+  if (isAnomaly === true && lastAnomalyState === false) {
+    if (window.Notification && Notification.permission === "granted") {
+      new Notification("🚨 حالة طوارئ حرجة!", {
+        body: "تحذير عاجل: تم رصد اضطراب في نبض المريض، وتم إيقاف حركة الكرسي فوراً!",
+        vibrate: [200, 100, 200]
+      });
+    }
+    playEmergencyAudioAlert();
+  }
+  lastAnomalyState = isAnomaly;
+});
+
+function playEmergencyAudioAlert() {
+  if ('speechSynthesis' in window) {
+    let speechMsg = new SpeechSynthesisUtterance("تحذير طبي عاجل، نبض المريض غير مستقر!");
+    speechMsg.lang = 'ar-EG';
+    speechMsg.rate = 0.9;
+    window.speechSynthesis.speak(speechMsg);
+  }
+  try {
+    let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    let o = audioCtx.createOscillator();
+    let g = audioCtx.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(880, audioCtx.currentTime);
+    g.gain.setValueAtTime(0.5, audioCtx.currentTime);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 2.5);
+  } catch(e) { console.log(e); }
+}
+
+if (window.setupPushNotifications) {
+  window.setupPushNotifications("{{ vapid_public_key|default('') }}");
+}
+</script>
+</body>
+</html>

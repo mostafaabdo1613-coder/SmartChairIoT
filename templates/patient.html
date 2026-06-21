@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<meta name="theme-color" content="#0A0D12">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+<title>SmartChair // الملف الطبي</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+</head>
+<body>
+
+{% include "_sidebar.html" %}
+
+<main class="main">
+  <div class="topbar">
+    <div class="page-title">الملف <span>الطبي</span></div>
+    <button class="btn btn-primary" id="edit-btn" onclick="toggleEdit()"><i class="ti ti-edit" aria-hidden="true"></i> تعديل</button>
+  </div>
+
+  <div id="banner" class="banner"></div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;">
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-id-badge-2" aria-hidden="true"></i> البيانات الشخصية</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--glass-border);">
+        <div class="avatar" id="avatar" style="overflow:hidden;padding:0;">؟</div>
+        <div>
+          <div id="v-name" style="font-size:16px;font-weight:700;color:var(--text-hi);">جاري التحميل...</div>
+          <div id="v-id" style="font-size:11.5px;color:var(--text-mid);margin-top:2px;"></div>
+        </div>
+      </div>
+      <div class="info-row"><span>العمر</span><span id="v-age">--</span></div>
+      <div class="info-row"><span>فصيلة الدم</span><span id="v-blood">--</span></div>
+      <div class="info-row"><span>التشخيص</span><span id="v-diagnosis">--</span></div>
+      <div class="info-row"><span>الطبيب المعالج</span><span id="v-doctor">--</span></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title"><i class="ti ti-phone-call" aria-hidden="true"></i> الراعي وتعليمات الطوارئ</div>
+      <div class="info-row"><span>اسم الراعي</span><span id="v-cname">--</span></div>
+      <div class="info-row"><span>صلة القرابة</span><span id="v-crel">--</span></div>
+      <div class="info-row"><span>موبايل الراعي</span><span id="v-cphone" style="color:var(--cyan);">--</span></div>
+      <div class="info-row"><span>رقم الطوارئ</span><span id="v-e1" style="color:var(--red);">--</span></div>
+      <div class="info-row"><span>تعليمات خاصة</span><span id="v-instructions">--</span></div>
+    </div>
+  </div>
+
+  <div class="panel" id="edit-form" style="display:none;">
+    <div class="panel-title"><i class="ti ti-edit" aria-hidden="true"></i> تعديل الملف</div>
+    <div class="field">
+      <label>صورة المريض</label>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div id="photo-preview" style="width:60px;height:60px;border-radius:var(--radius-m);background:var(--bg-panel-2);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center;overflow:hidden;">
+          <i class="ti ti-photo" style="color:var(--text-low);font-size:22px;" aria-hidden="true"></i>
+        </div>
+        <input type="file" id="f-photo" accept="image/*" onchange="handlePhoto(event)" />
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>الاسم الكامل *</label><input type="text" id="f-name" /></div>
+      <div class="field"><label>رقم الملف</label><input type="text" id="f-id" /></div>
+      <div class="field"><label>العمر</label><input type="number" id="f-age" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>فصيلة الدم</label>
+        <select id="f-blood"><option value="">اختر...</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>O+</option><option>O-</option><option>AB+</option><option>AB-</option></select>
+      </div>
+      <div class="field"><label>التشخيص</label><input type="text" id="f-diagnosis" /></div>
+    </div>
+    <div class="field"><label>الطبيب المعالج</label><input type="text" id="f-doctor" /></div>
+    <div class="divider"></div>
+    <div class="grid2">
+      <div class="field"><label>اسم الراعي</label><input type="text" id="f-cname" /></div>
+      <div class="field"><label>صلة القرابة</label><input type="text" id="f-crel" /></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>موبايل الراعي</label><input type="tel" id="f-cphone" /></div>
+      <div class="field"><label>رقم الطوارئ</label><input type="tel" id="f-e1" /></div>
+    </div>
+    <div class="field"><label>تعليمات طوارئ خاصة</label><textarea id="f-instructions"></textarea></div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="toggleEdit()">إلغاء</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="savePatient()"><i class="ti ti-device-floppy" aria-hidden="true"></i> حفظ في Firebase</button>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { db, ref, onValue, update } from "{{ url_for('static', filename='firebase.js') }}";
+
+let editMode = false;
+let cur = {};
+let photoBase64 = null;
+
+window.handlePhoto = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxSize = 240;
+      let w = img.width, h = img.height;
+      if (w > h) { h = h * (maxSize / w); w = maxSize; } else { w = w * (maxSize / h); h = maxSize; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+      document.getElementById('photo-preview').innerHTML = `<img src="${photoBase64}" style="width:100%;height:100%;object-fit:cover;" alt="معاينة صورة المريض" />`;
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+};
+
+window.toggleEdit = () => {
+  editMode = !editMode;
+  document.getElementById('edit-form').style.display = editMode ? 'block' : 'none';
+  document.getElementById('edit-btn').innerHTML = editMode ? '<i class="ti ti-x" aria-hidden="true"></i> إلغاء' : '<i class="ti ti-edit" aria-hidden="true"></i> تعديل';
+  if (editMode) {
+    photoBase64 = null;
+    document.getElementById('photo-preview').innerHTML = cur.photo_base64
+      ? `<img src="${cur.photo_base64}" style="width:100%;height:100%;object-fit:cover;" alt="صورة المريض" />`
+      : '<i class="ti ti-photo" style="color:var(--text-low);font-size:22px;" aria-hidden="true"></i>';
+    document.getElementById('f-name').value = cur.name ?? '';
+    document.getElementById('f-id').value = cur.file_id ?? '';
+    document.getElementById('f-age').value = cur.age ?? '';
+    document.getElementById('f-blood').value = cur.blood_type ?? '';
+    document.getElementById('f-diagnosis').value = cur.diagnosis ?? '';
+    document.getElementById('f-doctor').value = cur.doctor ?? '';
+    document.getElementById('f-cname').value = cur.caregiver_name ?? '';
+    document.getElementById('f-crel').value = cur.caregiver_relation ?? '';
+    document.getElementById('f-cphone').value = cur.caregiver_phone ?? '';
+    document.getElementById('f-e1').value = cur.emergency_phone ?? '';
+    document.getElementById('f-instructions').value = cur.instructions ?? '';
+  }
+};
+
+window.savePatient = async () => {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showBanner('اكتب اسم المريض', 'warn'); return; }
+  const data = {
+    name,
+    file_id: document.getElementById('f-id').value,
+    age: parseInt(document.getElementById('f-age').value) || null,
+    blood_type: document.getElementById('f-blood').value,
+    diagnosis: document.getElementById('f-diagnosis').value,
+    doctor: document.getElementById('f-doctor').value,
+    caregiver_name: document.getElementById('f-cname').value,
+    caregiver_relation: document.getElementById('f-crel').value,
+    caregiver_phone: document.getElementById('f-cphone').value,
+    emergency_phone: document.getElementById('f-e1').value,
+    instructions: document.getElementById('f-instructions').value,
+    photo_base64:       photoBase64 ?? cur.photo_base64 ?? null,
+    updated_at:         new Date().toISOString()
+  };
+  try {
+    await update(ref(db, 'patient'), data);
+    showBanner('تم الحفظ في Firebase', 'ok');
+    toggleEdit();
+  } catch(e) { showBanner('خطأ: ' + e.message, 'danger'); }
+};
+
+function showBanner(msg, type) {
+  const b = document.getElementById('banner');
+  b.className = 'banner show banner-' + type;
+  b.textContent = msg;
+  setTimeout(() => b.classList.remove('show'), 4000);
+}
+
+onValue(ref(db, 'patient'), snap => {
+  const d = snap.val();
+  if (!d) return;
+  cur = d;
+  const initials = (d.name ?? 'م').split(' ').map(w=>w[0]).slice(0,2).join('');
+  document.getElementById('avatar').innerHTML = d.photo_base64
+    ? `<img src="${d.photo_base64}" style="width:100%;height:100%;object-fit:cover;" alt="صورة المريض ${d.name ?? ''}" />`
+    : initials;
+  document.getElementById('v-name').textContent = d.name ?? '--';
+  document.getElementById('v-id').textContent = d.file_id ? 'رقم الملف: ' + d.file_id : '';
+  document.getElementById('v-age').textContent = d.age ? d.age + ' سنة' : '--';
+  document.getElementById('v-blood').textContent = d.blood_type ?? '--';
+  document.getElementById('v-diagnosis').textContent = d.diagnosis ?? '--';
+  document.getElementById('v-doctor').textContent = d.doctor ?? '--';
+  document.getElementById('v-cname').textContent = d.caregiver_name ?? '--';
+  document.getElementById('v-crel').textContent = d.caregiver_relation ?? '--';
+  document.getElementById('v-cphone').textContent = d.caregiver_phone ?? '--';
+  document.getElementById('v-e1').textContent = d.emergency_phone ?? '--';
+  document.getElementById('v-instructions').textContent = d.instructions ?? '--';
+});
+</script>
+</body>
+</html>
