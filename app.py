@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, jsonify
 from apscheduler.schedulers.background import BackgroundScheduler
 import json
@@ -12,9 +11,10 @@ except ImportError:
 
 app = Flask(__name__)
 
+# هذا السطر مهم جداً لـ Vercel ليتمكن من تشغيل التطبيق بنجاح
+application = app
 
 FIREBASE_DB_URL = "https://smartchair-b40bb-default-rtdb.firebaseio.com"
-
 
 VAPID_PRIVATE_KEY = "70tqMfUDUwnhn2svVIHjhADfQaxM3qnFl9v3hu1NDGE"
 VAPID_PUBLIC_KEY  = "VoWg7Ig_BFeyAvonuxpt5mhZgmuUFNW6KRCYoKF-iYsHkhWczIw5Vd_k9ZvAQYgmxLP9RLKJKaXfosiedM2OBVI"
@@ -25,16 +25,25 @@ _sent_today = {}
 
 
 def fb_get(path):
-    r = requests.get(f"{FIREBASE_DB_URL}/{path}.json", timeout=5)
-    return r.json() if r.ok else None
+    try:
+        r = requests.get(f"{FIREBASE_DB_URL}/{path}.json", timeout=5)
+        return r.json() if r.ok else None
+    except Exception:
+        return None
 
 
 def fb_put(path, value):
-    requests.put(f"{FIREBASE_DB_URL}/{path}.json", json=value, timeout=5)
+    try:
+        requests.put(f"{FIREBASE_DB_URL}/{path}.json", json=value, timeout=5)
+    except Exception:
+        pass
 
 
 def fb_push(path, value):
-    requests.post(f"{FIREBASE_DB_URL}/{path}.json", json=value, timeout=5)
+    try:
+        requests.post(f"{FIREBASE_DB_URL}/{path}.json", json=value, timeout=5)
+    except Exception:
+        pass
 
 
 def load_subscriptions():
@@ -49,8 +58,11 @@ def save_subscription(sub):
     subs = load_subscriptions()
     if sub not in subs:
         subs.append(sub)
-        with open(SUBSCRIPTIONS_FILE, "w") as f:
-            json.dump(subs, f)
+        try:
+            with open(SUBSCRIPTIONS_FILE, "w") as f:
+                json.dump(subs, f)
+        except Exception:
+            pass
 
 
 def send_push_to_all(title, body):
@@ -63,7 +75,7 @@ def send_push_to_all(title, body):
                 data=json.dumps({"title": title, "body": body}),
                 vapid_private_key=VAPID_PRIVATE_KEY,
                 vapid_claims=VAPID_CLAIMS,
-            )
+                )
         except WebPushException:
             pass
 
@@ -96,11 +108,14 @@ def check_medication_schedule():
 
         send_push_to_all("موعد دواء ", f"{name} — {dose}")
 
-        scheduler.add_job(
-            confirm_check, "date",
-            run_date=now + datetime.timedelta(minutes=30),
-            args=[name]
-        )
+        try:
+            scheduler.add_job(
+                confirm_check, "date",
+                run_date=now + datetime.timedelta(minutes=30),
+                args=[name]
+            )
+        except Exception:
+            pass
 
 
 def confirm_check(med_name):
@@ -112,9 +127,13 @@ def confirm_check(med_name):
     send_push_to_all(" تنبيه متابعة دواء", f"لم يتم تأكيد أخذ {med_name}")
 
 
+# تفعيل الـ Scheduler فقط إذا كان يعمل محلياً لضمان عدم انهيار سيرفر Vercel السحابي
 scheduler = BackgroundScheduler()
-scheduler.add_job(check_medication_schedule, "interval", seconds=20)
-scheduler.start()
+try:
+    scheduler.add_job(check_medication_schedule, "interval", seconds=20)
+    scheduler.start()
+except Exception:
+    pass
 
 @app.route('/')
 def index():
@@ -132,6 +151,11 @@ def medications():
 def alerts():
     return render_template('alerts.html', active='alerts')
 
+# راوت جديد مخصص لـ Vercel لفحص المواعيد أوتوماتيكياً عند تصفح الموقع أو عبر الـ ESP32
+@app.route('/cron/check', methods=['GET', 'POST'])
+def cron_check():
+    check_medication_schedule()
+    return jsonify({"status": "checked", "time": datetime.datetime.now().strftime("%H:%M")})
 
 @app.route('/save-subscription', methods=['POST'])
 def save_sub():
