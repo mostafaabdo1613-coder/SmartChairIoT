@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Cairo:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght=500;600;700&family=Cairo:wght=400;500;600;700&display=swap');
 
 :root {
   --bg-void:      #0A0D12;
@@ -61,6 +61,7 @@ body {
 
 .mono-num { font-family: var(--font-display); font-weight: 600; letter-spacing: 0.5px; }
 
+/* القائمة الجانبية في الشاشات الكبيرة */
 .sidebar {
   width: var(--sidebar-w);
   background: linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-void) 100%);
@@ -68,7 +69,7 @@ body {
   position: fixed; top: 0; right: 0; height: 100vh;
   display: flex; flex-direction: column;
   padding: 1.5rem 0;
-  z-index: 100;
+  z-index: 9999;
 }
 
 .brand {
@@ -211,7 +212,7 @@ body {
 }
 @keyframes danger-flash {
   0%,100% { box-shadow: inset 0 0 0 1px var(--red), 0 0 18px var(--red-glow); }
-  50%     { box-shadow: inset 0 0 0 1px var(--red), 0 0 4px transparent; }
+  50%      { box-shadow: inset 0 0 0 1px var(--red), 0 0 4px transparent; }
 }
 .fall-warn {
   background: rgba(245,166,35,0.08); color: var(--amber);
@@ -309,7 +310,7 @@ body {
   font-size: 13px; font-weight: 600; backdrop-filter: blur(8px);
 }
 .banner.show { display: block; }
-.banner-ok   { background: rgba(52,211,153,0.1); color: var(--green); box-shadow: inset 0 0 0 1px rgba(52,211,153,0.3); }
+.banner-ok    { background: rgba(52,211,153,0.1); color: var(--green); box-shadow: inset 0 0 0 1px rgba(52,211,153,0.3); }
 .banner-warn { background: rgba(245,166,35,0.1); color: var(--amber); box-shadow: inset 0 0 0 1px rgba(245,166,35,0.3); }
 .banner-danger { background: rgba(255,59,78,0.1); color: var(--red); box-shadow: inset 0 0 0 1px rgba(255,59,78,0.3); }
 
@@ -328,38 +329,111 @@ body {
 .info-row span:first-child { color: var(--text-mid); }
 .info-row span:last-child  { color: var(--text-hi); font-weight: 600; }
 
-@media (max-width: 900px) {
-  .sidebar { display: none; }
-  .main { margin-right: 0; padding: 1.25rem; }
-  .metric-grid { grid-template-columns: 1fr 1fr; }
-  .grid2, .grid3 { grid-template-columns: 1fr; }
-}
 
-@media (max-width: 768px) {
-  .metric-grid {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    display: none;
-  }
-  .main {
-    margin-right: 0;
-    padding: 10px;
-  }
-  .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  .panel, .metric {
-    padding: 0.9rem 1rem;
-  }
-  .page-title {
-    font-size: 18px;
-  }
-  div[style*="grid-template-columns:1.3fr 1fr"],
-  div[style*="grid-template-columns:1.4fr 1fr"],
-  div[style*="grid-template-columns: 1.3fr 1fr"],
-  div[style*="grid-template-columns: 1.4fr 1fr"] {
-    grid-template-columns: 1fr !important;
-  }
+/* ======================================================== */
+/* --- ضبط العرض المتجاوب للموبايل والشاشات الصغيرة (أقل من 850 بكسل) --- */
+/* ======================================================== */
+@media (max-width: 850px) {
+    /* تحويل الشريط الجانبي إلى بار سفلي مثبت أسفل شاشة الهاتف */
+    .sidebar {
+        width: 100% !important;
+        height: 65px !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        top: auto !important;
+        display: flex !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 0 10px !important;
+        z-index: 99999 !important;
+        background: #11161d !important;
+        border-right: none !important;
+        border-left: none !important;
+        border-top: 1px solid rgba(120, 150, 180, 0.16) !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        height: 65px !important;
+    }
+
+    /* إخفاء الهيدر وجملة فيسبوك في الموبايل لتوفير المساحة للأزرار */
+    .sidebar .brand, .sidebar .sidebar-bottom {
+        display: none !important;
+    }
+
+    /* تحويل قائمة اللينكات لصف أفقي ممتد بكامل العرض */
+    .sidebar .nav {
+        display: flex !important;
+        flex-direction: row !important;
+        width: 100% !important;
+        justify-content: space-around !important;
+        align-items: center !important;
+        gap: 2px !important;
+        padding: 0 !important;
+    }
+
+    /* ضبط شكل الأزرار في الموبايل لتصبح أيقونة وتحتها نص صغير */
+    .sidebar .nav-item {
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 6px 0 !important;
+        font-size: 11px !important;
+        gap: 3px !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+    }
+
+    /* إلغاء الخط الجانبي للأكتيف في الموبايل */
+    .sidebar .nav-item.active::before {
+        display: none !important;
+    }
+
+    /* ضبط حجم الأيقونات لتكون واضحة */
+    .sidebar .nav-item i {
+        font-size: 19px !important;
+        margin: 0 !important;
+    }
+
+    /* إعطاء مساحة حرة للمحتوى الأساسي عشان البار السفلي ما يغطيش على المحتوى */
+    .main {
+        margin-right: 0 !important;
+        padding: 12px !important;
+        padding-bottom: 90px !important; /* مساحة الأمان التحتية */
+    }
+
+    .topbar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
+    .page-title {
+        font-size: 18px !important;
+    }
+
+    /* ضبط الكروت لتصبح صفين في الموبايل */
+    .metric-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+    }
+    
+    .grid2, .grid3 {
+        grid-template-columns: 1fr !important;
+    }
+
+    .panel, .metric {
+        padding: 0.9rem 1rem !important;
+    }
+
+    /* إلغاء الجريد المتداخل اللي بيبوظ التصميم في الموبايل */
+    div[style*="grid-template-columns:1.3fr 1fr"],
+    div[style*="grid-template-columns:1.4fr 1fr"],
+    div[style*="grid-template-columns: 1.3fr 1fr"],
+    div[style*="grid-template-columns: 1.4fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
 }
