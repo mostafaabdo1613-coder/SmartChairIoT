@@ -17,21 +17,14 @@
 
 <main class="main">
   <div class="header-container" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--glass-border); margin-bottom: 20px; border-radius: 8px;">
-    
-      <button class="btn btn-primary" onclick="window.openForm(true)"><i class="ti ti-plus" aria-hidden="true"></i> دواء جديد</button>
-    </div>
+      <button class="btn btn-primary" id="btn-new-med" onclick="window.openForm(true)"><i class="ti ti-plus" aria-hidden="true"></i> دواء جديد</button>
   </div>
 
   <div id="banner" class="banner"></div>
 
   <div style="display:grid; grid-template-columns:1.2fr 1fr; gap:1.1rem;">
-    
     <div style="display:flex; flex-direction:column; gap:1.1rem;">
-      <div class="panel" style="text-align: center; padding: 20px;">
-        
-        
-      </div>
-
+      <div class="panel" style="text-align: center; padding: 20px;"></div>
       <div class="panel">
         <div class="panel-title"><i class="ti ti-list-check" aria-hidden="true"></i> قائمة الأدوية الجارية</div>
         <div id="meds-list"><div style="text-align:center;padding:1.5rem;color:var(--text-low);font-size:13px;">جاري التحميل من Firebase...</div></div>
@@ -76,7 +69,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </main>
 
@@ -88,12 +80,10 @@ let selColor = '#2FD3E0';
 let medsCache = {};
 const confirmedToday = {};
 
-// طلب تصريح الإشعارات فور فتح اللوحة
 if (window.Notification && Notification.permission !== "granted") {
   Notification.requestPermission();
 }
 
-// ── تهيئة وتأمين الدوال داخل الـ window لضمان الربط الصحيح ──
 window.openForm = function(reset) {
   if (reset === undefined) reset = true;
   if (reset) {
@@ -173,7 +163,6 @@ window.deleteMed = async function(id, name) {
   window.showBanner(`تم حذف "${name}"`, 'ok');
 };
 
-// ── أزرار التحكم في جرس الدواء بالفايربيز ──
 window.setMedBuzzer = function(status) {
   set(ref(db, 'config/trigger_buzzer_med'), status)
   .then(() => { window.showBanner(status ? "تم إرسال إشارة جرس الدواء للأونو" : "تم إيقاف الجرس يدوياً", "ok"); })
@@ -197,22 +186,24 @@ window.renderList = function() {
   const c = document.getElementById('meds-list');
   const entries = Object.entries(medsCache);
   if (!entries.length) { c.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--text-low);font-size:13px;">لا توجد أدوية بعد</div>'; return; }
+  
+  // التحقق من الحساب لإخفاء أزرار التعديل والحذف من التصميم تماماً لليوزر العادي
+  const isUser = "{{ role }}" !== "admin";
+
   c.innerHTML = entries.map(([id, m]) => `
     <div class="med-row">
       <div class="med-dot" style="background:${m.color ?? '#2FD3E0'};"></div>
       <div style="flex:1;"><div class="med-name">${m.name}</div><div class="med-sub">${m.dose} · ${(m.times ?? []).join(' · ')}</div></div>
-      <button class="icon-btn" onclick="window.editMed('${id}')" aria-label="تعديل"><i class="ti ti-edit" aria-hidden="true"></i></button>
-      <button class="icon-btn" onclick="window.deleteMed('${id}','${m.name}')" aria-label="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>
+      ${isUser ? '' : `<button class="icon-btn" onclick="window.editMed('${id}')" aria-label="تعديل"><i class="ti ti-edit" aria-hidden="true"></i></button>`}
+      ${isUser ? '' : `<button class="icon-btn" onclick="window.deleteMed('${id}','${m.name}')" aria-label="حذف"><i class="ti ti-trash" aria-hidden="true"></i></button>`}
     </div>`).join('');
 };
 
-// ── الاستماع لبيانات الأدوية من الفايربيز ──
 onValue(ref(db, 'medications'), snap => {
   medsCache = snap.val() ?? {};
   window.renderList();
 });
 
-// ── مراقبة حالة الطوارئ الحرجة ونطق الصوت والإنذار ──
 let lastAnomalyState = false;
 onValue(ref(db, 'chair/isAnomaly'), snap => {
   const isAnomaly = snap.val();
@@ -249,6 +240,33 @@ function playEmergencyAudioAlert() {
 if (window.setupPushNotifications) {
   window.setupPushNotifications("{{ vapid_public_key|default('') }}");
 }
+
+// 🔐 الحصن الحديدي لصفحة الأدوية: حظر جميع العمليات فوراً في المتصفح لغير الآدمن
+document.addEventListener("DOMContentLoaded", function() {
+  if ("{{ role }}" !== "admin") {
+    // 1. إخفاء أزرار التحكم الرئيسية
+    const btnNew = document.getElementById('btn-new-med');
+    if(btnNew) btnNew.style.display = 'none';
+    
+    // 2. شل حركة أزرار التنبيهات
+    const controlButtons = document.querySelectorAll('#btn-trigger-med, #btn-stop-med, #btn-confirm-med');
+    controlButtons.forEach(btn => {
+      btn.disabled = true;
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+    });
+
+    // 3. منع أي نقرات غير مصرح بها على مستوى الصفحة وعرض التنبيه
+    document.body.addEventListener('click', function(e) {
+      if (e.target.closest('button, input, select') && !e.target.closest('a[href="/logout"]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        alert('⚠️ عذراً، هذا الحساب للمشاهدة فقط! التحكم في الأدوية والمنبهات متاح فقط للآدمن.');
+        return false;
+      }
+    }, true);
+  }
+});
 </script>
 </body>
 </html>

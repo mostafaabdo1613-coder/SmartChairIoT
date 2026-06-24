@@ -24,23 +24,23 @@
 </head>
 <body>
 
-
-
-  
-
 {% include "_sidebar.html" %}
 
 <main class="main">
 
   <div class="topbar">
     <div class="page-title">لوحة <span>التحكم</span></div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <button class="btn btn-ghost" style="padding:6px 12px;font-size:11.5px;" onclick="window.setupPushNotifications('{{ vapid_public_key }}')">
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap: wrap;">
+      <button class="btn btn-ghost" style="padding:6px 12px; font-size:11.5px;" onclick="window.setupPushNotifications('{{ vapid_public_key }}')">
         <i class="ti ti-bell-ringing" aria-hidden="true"></i> إشعارات الموبايل
       </button>
       <div class="status-chip chip-on" id="chair-chip"><i class="ti ti-circle-filled" style="font-size:8px;" aria-hidden="true"></i> النظام آمن</div>
       <div class="status-chip chip-off" id="device-chip" style="display:none;"><i class="ti ti-plug-connected-x" aria-hidden="true"></i> الجهاز غير متصل</div>
-      <span class="mono-num" style="font-size:13px;color:var(--text-mid);" id="clock">--:--</span>
+      <span class="mono-num" style="font-size:13px; color:var(--text-mid);" id="clock">--:--</span>
+      
+      <a href="/logout" class="btn btn-danger" style="padding:6px 12px; font-size:11.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+        <i class="ti ti-logout" style="font-size: 14px;"></i> خروج
+      </a>
     </div>
   </div>
 
@@ -50,15 +50,9 @@
       <div class="metric-val mono-num" id="m-bpm">-- <span class="unit">BPM</span></div>
       <div class="metric-foot" id="m-bpm-status" style="color:var(--text-low);">بانتظار الإشارة</div>
     </div>
-   
-    <div class="metric m-green">
-      <div class="metric-lbl"><i class="ti ti-battery-4" aria-hidden="true"></i> طاقة الكرسي</div>
-      <div class="metric-val mono-num" id="m-bat">-- <span class="unit">%</span></div>
-      <div class="metric-foot" id="m-bat-status" style="color:var(--text-low);">بانتظار القراءة</div>
-    </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:1.1rem;">
+  <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:1.1rem;">
     <div class="panel">
       <div class="panel-title"><i class="ti ti-shield-bolt" aria-hidden="true"></i>حاله المريض</div>
       <div class="fall-badge fall-stable" id="fall-badge">
@@ -66,6 +60,7 @@
         <span id="fall-text">جاري الاتصال بالخوذة...</span>
       </div>
     </div>
+    
     <div class="panel">
       <div class="panel-title"><i class="ti ti-shield-lock" aria-hidden="true"></i> نظام الأمان</div>
       <div class="safety-toggle-row">
@@ -73,8 +68,8 @@
           <div class="safety-label">تفعيل نظام الأمان الطبي وفحص الإغماء</div>
           <div class="safety-sub" id="safety-status">الحالة: متوقف</div>
         </div>
-        <label class="switch">
-          <input type="checkbox" id="safety-switch" />
+        <label class="switch" id="switch-container">
+          <input type="checkbox" id="safety-switch" disabled />
           <span class="switch-track"></span>
           <span class="switch-thumb"></span>
         </label>
@@ -82,7 +77,7 @@
     </div>
   </div>
 
-  <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.1rem;">
+  <div style="display:grid; grid-template-columns:1.4fr 1fr; gap:1.1rem;">
     <div class="panel">
       <div class="panel-title"><i class="ti ti-chart-line" aria-hidden="true"></i> تتبع النبض - مباشر</div>
       <div class="chart-wrap">
@@ -92,7 +87,7 @@
     <div class="panel">
       <div class="panel-title"><i class="ti ti-pill" aria-hidden="true"></i> أدوية اليوم</div>
       <div id="meds-today">
-        <div style="font-size:12.5px;color:var(--text-low);text-align:center;padding:1.5rem 0;">جاري التحميل من Firebase...</div>
+        <div style="font-size:12.5px; color:var(--text-low); text-align:center; padding:1.5rem 0;">جاري التحميل من Firebase...</div>
       </div>
     </div>
   </div>
@@ -100,7 +95,7 @@
   <div class="panel">
     <div class="panel-title"><i class="ti ti-terminal-2" aria-hidden="true"></i> آخر السجلات</div>
     <div id="logs-summary">
-      <div style="font-size:12.5px;color:var(--text-low);text-align:center;padding:1rem 0;">لا توجد سجلات بعد</div>
+      <div style="font-size:12.5px; color:var(--text-low); text-align:center; padding:1rem 0;">لا توجد سجلات بعد</div>
     </div>
   </div>
 
@@ -120,10 +115,12 @@ function checkDeviceFreshness() {
   const isStale = !lastSeenMs || (Date.now() - lastSeenMs > 6000);
   deviceChip.style.display = isStale ? 'flex' : 'none';
 
-  ['m-bpm', 'm-dist', 'm-bat'].forEach(id => {
+  ['m-bpm'].forEach(id => {
     const el = document.getElementById(id);
-    if (isStale) el.style.opacity = '0.35';
-    else el.style.opacity = '1';
+    if (el) {
+      if (isStale) el.style.opacity = '0.35';
+      else el.style.opacity = '1';
+    }
   });
   if (isStale) {
     document.getElementById('m-bpm-status').textContent = 'لا يوجد اتصال بالجهاز';
@@ -174,24 +171,19 @@ onValue(ref(db, 'chair'), snap => {
   if (!d) return;
 
   const dirMap = { forward:'للأمام ▲', backward:'للخلف ▼', left:'يسار ◀', right:'يمين ▶', stop:'متوقف ■' };
-  document.getElementById('m-dir').textContent = dirMap[d.direction] ?? d.direction ?? '--';
+  const dirEl = document.getElementById('m-dir');
+  if(dirEl) dirEl.textContent = dirMap[d.direction] ?? d.direction ?? '--';
 
   const dist = d.distance_cm;
-  document.getElementById('m-dist').innerHTML = (dist ?? '--') + ' <span class="unit">CM</span>';
-  const ds = document.getElementById('m-dist-status');
-  if (typeof dist === 'number') {
-    if (dist < 30)      { ds.textContent = '🚨 خطر اصطدام'; ds.style.color = 'var(--red)'; }
-    else if (dist < 60) { ds.textContent = '⚠ اقتراب من عائق'; ds.style.color = 'var(--amber)'; }
-    else                { ds.textContent = '✓ المسار آمن'; ds.style.color = 'var(--green)'; }
-  }
-
-  const bat = d.battery_pct;
-  document.getElementById('m-bat').innerHTML = (bat ?? '--') + ' <span class="unit">%</span>';
-  const bs = document.getElementById('m-bat-status');
-  if (typeof bat === 'number') {
-    if (bat < 20)      { bs.textContent = '🔴 شحن فوري مطلوب'; bs.style.color = 'var(--red)'; }
-    else if (bat < 50) { bs.textContent = '🟡 متوسطة'; bs.style.color = 'var(--amber)'; }
-    else               { bs.textContent = '🟢 جيدة'; bs.style.color = 'var(--green)'; }
+  const distEl = document.getElementById('m-dist');
+  if(distEl) {
+    distEl.innerHTML = (dist ?? '--') + ' <span class="unit">CM</span>';
+    const ds = document.getElementById('m-dist-status');
+    if (typeof dist === 'number' && ds) {
+      if (dist < 30)      { ds.textContent = '🚨 خطر اصطدام'; ds.style.color = 'var(--red)'; }
+      else if (dist < 60) { ds.textContent = '⚠ اقتراب من عائق'; ds.style.color = 'var(--amber)'; }
+      else                { ds.textContent = '✓ المسار آمن'; ds.style.color = 'var(--green)'; }
+    }
   }
 
   const active = d.active ?? false;
@@ -230,7 +222,9 @@ onValue(ref(db, 'patient/fallStatus'), snap => {
 });
 
 const switchEl = document.getElementById('safety-switch');
+const switchContainer = document.getElementById('switch-container');
 let firstLoad = true;
+
 onValue(ref(db, 'config/pulse_check_enable'), snap => {
   const enabled = snap.val();
   if (enabled === null && firstLoad) {
@@ -240,14 +234,37 @@ onValue(ref(db, 'config/pulse_check_enable'), snap => {
   document.getElementById('safety-status').textContent = 'الحالة: ' + (enabled ? 'مفعّل ✓' : 'متوقف');
   firstLoad = false;
 });
-switchEl.addEventListener('change', () => {
-  set(ref(db, 'config/pulse_check_enable'), switchEl.checked);
+
+/* 🔐 نظام القفل المتجدد والذاتي لحماية السويتش في كل ضغطة */
+switchContainer.addEventListener('click', (e) => {
+  // منع المتصفح من تغيير حالة السويتش عشوائياً بدون إذن
+  e.preventDefault();
+  e.stopPropagation();
+
+  const password = prompt("هذه الخاصية محمية للمسؤولين فقط. أدخل كلمة سر الآدمن للتعديل:");
+  
+  if (password === "admin123") {
+    switchEl.disabled = false; // فك القفل مؤقتاً للتحديث
+    switchEl.checked = !switchEl.checked; // عكس الحالة الحالية برمجياً
+    
+    // إرسال البيانات فوراً لـ Firebase
+    set(ref(db, 'config/pulse_check_enable'), switchEl.checked);
+    document.getElementById('safety-status').textContent = 'الحالة: ' + (switchEl.checked ? 'مفعّل ✓' : 'متوقف');
+    
+    alert("تم التحقق بنجاح وتعديل الإعدادات الحيوية للنظام.");
+    
+    // 💥 إعادة القفل الصارم فوراً حتى يطلب الباسورد في المرة القادمة
+    switchEl.disabled = true;
+  } else {
+    alert("كلمة السر خاطئة! تم رفض التعديل والحفاظ على أمان النظام.");
+    switchEl.disabled = true;
+  }
 });
 
 onValue(ref(db, 'medications'), snap => {
   const data = snap.val();
   const c = document.getElementById('meds-today');
-  if (!data) { c.innerHTML = '<div style="font-size:12.5px;color:var(--text-low);text-align:center;padding:1.5rem 0;">لا توجد أدوية مضافة</div>'; return; }
+  if (!data) { c.innerHTML = '<div style="font-size:12.5px; color:var(--text-low); text-align:center; padding:1.5rem 0;">لا توجد أدوية مضافة</div>'; return; }
   const now = new Date();
   const nowMins = now.getHours()*60 + now.getMinutes();
   c.innerHTML = Object.values(data).map(m => {

@@ -437,3 +437,22 @@ body {
         grid-template-columns: 1fr !important;
     }
 }
+
+/* زر تسجيل الخروج المخصص */
+.nav-item.logout-item {
+    color: var(--red) !important;
+    margin-top: auto; /* يدفع الزر لأسفل القائمة في الشاشات الكبيرة */
+}
+
+.nav-item.logout-item:hover {
+    background: rgba(255, 59, 78, 0.1) !important;
+    color: var(--text-hi) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 59, 78, 0.25) !important;
+}
+
+/* تنسيق إضافي لشاشات الموبايل ليصبح متناسقاً في البار السفلي */
+@media (max-width: 850px) {
+    .nav-item.logout-item {
+        margin-top: 0 !important;
+    }
+}

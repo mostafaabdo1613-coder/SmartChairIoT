@@ -191,6 +191,25 @@ onValue(ref(db, 'patient'), snap => {
   document.getElementById('v-e1').textContent = d.emergency_phone ?? '--';
   document.getElementById('v-instructions').textContent = d.instructions ?? '--';
 });
+
+// 🔐 الحصن الحديدي لصفحة الملف الطبي
+document.addEventListener("DOMContentLoaded", function() {
+  if ("{{ role }}" !== "admin") {
+    // 1. إخفاء زر التعديل من الـ Topbar فوراً
+    const btnEdit = document.getElementById('edit-btn');
+    if(btnEdit) btnEdit.style.display = 'none';
+
+    // 2. حماية كاملة ضد أي نقرة عشوائية لعرض التنبيه وقفل الإدخال
+    document.body.addEventListener('click', function(e) {
+      if (e.target.closest('button, input, select, textarea') && !e.target.closest('a[href="/logout"]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        alert('⚠️ عذراً، هذا الحساب للمشاهدة فقط! تعديل بيانات المريض والملف الطبي متاح فقط للآدمن.');
+        return false;
+      }
+    }, true);
+  }
+});
 </script>
 </body>
 </html>

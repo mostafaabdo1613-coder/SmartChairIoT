@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
 #include <SoftwareSerial.h>
 
-SoftwareSerial espSerial(A0, A1); // RX, TX للمراسلة مع الـ ESP
+SoftwareSerial espSerial(A0, A1); 
 
 int IN1 = 2; int IN2 = 4; int IN3 = 7; int IN4 = 8;
 const int buzzerPin = 13;
@@ -34,7 +34,7 @@ long getDistance(int trigPin, int echoPin) {
   return duration * 0.034 / 2;
 }
 
-// ── بادري بدء التشغيل (زي العربية لما تدير المفتاح) ─────────────
+
 void playStartupChime() {
   int notes[]    = {1000, 1300, 1700};
   int durations[] = {90, 90, 160};
@@ -46,8 +46,8 @@ void playStartupChime() {
 }
 
 void setup() {
-  Serial.begin(115200);  // البلوتوث مع الخوذة
-  espSerial.begin(9600); // الاتصال بالـ ESP
+  Serial.begin(115200);  
+  espSerial.begin(9600); 
 
   pinMode(IN1, OUTPUT); pinMode(IN2, OUTPUT);
   pinMode(IN3, OUTPUT); pinMode(IN4, OUTPUT);
@@ -60,11 +60,10 @@ void setup() {
   digitalWrite(buzzerPin, LOW);
   lastSignalTime = millis();
 
-  playStartupChime();  // ← بادري التشغيل
-}
+  playStartupChime();  
 
 void loop() {
-  // 1) استقبال أوامر الخوذة عبر البلوتوث
+  
   if (Serial.available() > 0) {
     char rec = Serial.read();
     if (rec == 'F' || rec == 'B' || rec == 'L' || rec == 'R' || rec == 'S' || rec == 'X' || rec == 'W') {
@@ -74,7 +73,7 @@ void loop() {
     }
   }
 
-  // 2) استقبال أمر الدواء من الـ ESP
+ 
   if (espSerial.available() > 0) {
     char espCmd = espSerial.read();
     if (espCmd == 'M') {
@@ -91,7 +90,7 @@ void loop() {
 
   bool signalLost = helmetConnectedOnce && (millis() - lastSignalTime > 1500);
 
-  // 3) لوجيك الحماية المستقل (X = سقوط، W = إغماء/خلل)
+ 
   if (helmetCmd == 'X' || helmetCmd == 'W' || signalLost) {
     stopMotors();
     digitalWrite(buzzerPin, HIGH);
@@ -109,7 +108,7 @@ void loop() {
     digitalWrite(buzzerPin, LOW);
   }
 
-  // 4) إرسال البيانات للـ ESP
+  
   if (millis() - lastFirebaseUpdate > 400) {
     StaticJsonDocument<250> doc;
     doc["distance"] = distFront;

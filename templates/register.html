@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب - SmartChair</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght=400;600;700&display=swap');
+        body {
+            background-color: #0A0D12;
+            color: #E8EDF3;
+            font-family: 'Cairo', sans-serif;
+            background-image: linear-gradient(rgba(120, 150, 180, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(120, 150, 180, 0.05) 1px, transparent 1px);
+            background-size: 36px 36px;
+            height: 100vh;
+        }
+        .auth-card {
+            background: rgba(22, 28, 37, 0.55);
+            border: 1px solid rgba(120, 150, 180, 0.16);
+            border-radius: 18px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+        }
+        .form-control {
+            background: rgba(8, 11, 15, 0.5);
+            border: 1px solid rgba(120, 150, 180, 0.16);
+            color: #E8EDF3;
+        }
+        .form-control:focus {
+            background: rgba(8, 11, 15, 0.7);
+            border-color: #FFC400;
+            color: #E8EDF3;
+            box-shadow: 0 0 0 3px rgba(255, 196, 0, 0.12);
+        }
+        .btn-cyber {
+            background: rgba(76, 141, 255, 0.12);
+            color: #4C8DFF;
+            border: 1px solid rgba(76, 141, 255, 0.4);
+            font-weight: 700;
+        }
+        .btn-cyber:hover {
+            background: rgba(76, 141, 255, 0.25);
+            color: #4C8DFF;
+            box-shadow: 0 0 14px rgba(76, 141, 255, 0.3);
+        }
+        a { color: #FFC400; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center">
+    <div class="auth-card">
+        <h3 class="text-center mb-4" style="color: #4C8DFF;">إنشاء حساب جديد</h3>
+        
+        {% if error %}
+            <div class="alert alert-danger text-center" style="background: rgba(255,59,78,0.1); color: #FF3B4E; border-color: rgba(255,59,78,0.2);">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/register">
+            <div class="mb-3">
+                <label class="form-label" style="color: #8FA1B3;">اسم المستخدم (Username)</label>
+                <input type="text" name="username" class="form-control" placeholder="اختر اسم مستخدم فريد" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" style="color: #8FA1B3;">كلمة المرور</label>
+                <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-cyber w-100 mt-2">تسجيل الحساب</button>
+        </form>
+        <p class="text-center mt-4 mb-0" style="color: #8FA1B3; font-size: 14px;">لديك حساب بالفعل؟ <a href="/login">تسجيل الدخول</a></p>
+    </div>
+</body>
+</html>
